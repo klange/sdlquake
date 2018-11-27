@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+#include <toaru/spinlock.h>
+
 #define NUM_SAFE_ARGVS  7
 
 static char     *largv[MAX_NUM_ARGVS + NUM_SAFE_ARGVS + 1];
@@ -1539,6 +1541,7 @@ Allways appends a 0 byte.
 cache_user_t *loadcache;
 byte    *loadbuf;
 int             loadsize;
+static volatile int file_lock = 0;
 byte *COM_LoadFile (char *path, int usehunk)
 {
 	int             h;
@@ -1548,10 +1551,14 @@ byte *COM_LoadFile (char *path, int usehunk)
 
 	buf = NULL;     // quiet compiler warning
 
+	spin_lock(&file_lock);
+
 // look for it in the filesystem or pack files
 	len = COM_OpenFile (path, &h);
-	if (h == -1)
+	if (h == -1) {
+		spin_unlock(&file_lock);
 		return NULL;
+	}
 	
 // extract the filename base name for hunk tag
 	COM_FileBase (path, base);
@@ -1584,6 +1591,7 @@ byte *COM_LoadFile (char *path, int usehunk)
 	COM_CloseFile (h);
 	Draw_EndDisc ();
 
+	spin_unlock(&file_lock);
 	return buf;
 }
 

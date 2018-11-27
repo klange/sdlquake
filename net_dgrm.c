@@ -18,6 +18,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 */
 // net_dgrm.c
+//
+#if 0
 
 // This is enables a simple IP banning mechanism
 #define BAN_TEST
@@ -1388,3 +1390,4 @@ qsocket_t *Datagram_Connect (char *host)
 				break;
 	return ret;
 }
+#endif

@@ -1,96 +1,86 @@
 
+#include <assert.h>
 #include <stdio.h>
-#include "SDL_audio.h"
-#include "SDL_byteorder.h"
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
 #include "quakedef.h"
+
 
 static dma_t the_shm;
 static int snd_inited;
 
-extern int desired_speed;
-extern int desired_bits;
+static int wbufp;
 
-static void paint_audio(void *unused, Uint8 *stream, int len)
-{
-	if ( shm ) {
-		shm->buffer = stream;
-		shm->samplepos += len/(shm->samplebits/8)/2;
-		// Check for samplepos overflow?
-		S_PaintChannels (shm->samplepos);
+static int dsp;
+
+#define BUFFER_SIZE		8192
+
+unsigned char dma_buffer[BUFFER_SIZE];
+unsigned char pend_buffer[BUFFER_SIZE];
+
+void SNDDMA_Submit(void) {
+	int samps;
+	int bsize;
+	int bytes, b;
+	static unsigned char writebuf[1024];
+	unsigned char *p;
+	int idx;
+	int stop = paintedtime;
+	extern int soundtime;
+
+	if (paintedtime < wbufp)
+		wbufp = 0; // reset
+
+	bsize = shm->channels * (shm->samplebits/8);
+	bytes = (paintedtime - wbufp) * bsize;
+
+	if (!bytes)
+		return;
+
+	if (bytes > sizeof(writebuf)) {
+		bytes = sizeof(writebuf);
+		stop = wbufp + bytes/bsize;
 	}
+
+	p = writebuf;
+	idx = (wbufp*bsize) & (BUFFER_SIZE - 1);
+
+	for (b = bytes; b; b--) {
+		*p++ = dma_buffer[idx];
+		idx = (idx + 1) & (BUFFER_SIZE - 1);
+	}
+
+	wbufp = stop;
+
+	if (write(dsp, writebuf, bytes) < bytes)
+		printf("audio can't keep up!\n");
+
 }
 
 qboolean SNDDMA_Init(void)
 {
-	SDL_AudioSpec desired, obtained;
 
 	snd_inited = 0;
 
+	dsp = open("/dev/dsp", O_WRONLY);
+
+	ioctl(dsp, 4, NULL);
+
 	/* Set up the desired format */
-	desired.freq = desired_speed;
-	switch (desired_bits) {
-		case 8:
-			desired.format = AUDIO_U8;
-			break;
-		case 16:
-			if ( SDL_BYTEORDER == SDL_BIG_ENDIAN )
-				desired.format = AUDIO_S16MSB;
-			else
-				desired.format = AUDIO_S16LSB;
-			break;
-		default:
-        		Con_Printf("Unknown number of audio bits: %d\n",
-								desired_bits);
-			return 0;
-	}
-	desired.channels = 2;
-	desired.samples = 512;
-	desired.callback = paint_audio;
-
-	/* Open the audio device */
-	if ( SDL_OpenAudio(&desired, &obtained) < 0 ) {
-        	Con_Printf("Couldn't open SDL audio: %s\n", SDL_GetError());
-		return 0;
-	}
-
-	/* Make sure we can support the audio format */
-	switch (obtained.format) {
-		case AUDIO_U8:
-			/* Supported */
-			break;
-		case AUDIO_S16LSB:
-		case AUDIO_S16MSB:
-			if ( ((obtained.format == AUDIO_S16LSB) &&
-			     (SDL_BYTEORDER == SDL_LIL_ENDIAN)) ||
-			     ((obtained.format == AUDIO_S16MSB) &&
-			     (SDL_BYTEORDER == SDL_BIG_ENDIAN)) ) {
-				/* Supported */
-				break;
-			}
-			/* Unsupported, fall through */;
-		default:
-			/* Not supported -- force SDL to do our bidding */
-			SDL_CloseAudio();
-			if ( SDL_OpenAudio(&desired, NULL) < 0 ) {
-        			Con_Printf("Couldn't open SDL audio: %s\n",
-							SDL_GetError());
-				return 0;
-			}
-			memcpy(&obtained, &desired, sizeof(desired));
-			break;
-	}
-	SDL_PauseAudio(0);
 
 	/* Fill the audio DMA information block */
 	shm = &the_shm;
 	shm->splitbuffer = 0;
-	shm->samplebits = (obtained.format & 0xFF);
-	shm->speed = obtained.freq;
-	shm->channels = obtained.channels;
-	shm->samples = obtained.samples*shm->channels;
+	shm->samplebits = 16;
+	shm->speed = 48000;
+	shm->channels = 2;
+
+	shm->soundalive = true;
+	shm->samples = sizeof(dma_buffer) / (shm->samplebits/8);
 	shm->samplepos = 0;
 	shm->submission_chunk = 1;
-	shm->buffer = NULL;
+	shm->buffer = (unsigned char *)dma_buffer;
 
 	snd_inited = 1;
 	return 1;
@@ -98,14 +88,19 @@ qboolean SNDDMA_Init(void)
 
 int SNDDMA_GetDMAPos(void)
 {
-	return shm->samplepos;
+	return ioctl(dsp, 5, NULL) * shm->channels % shm->samples;
+}
+
+int SNDDMA_GetSamples(void)
+{
+	return ioctl(dsp, 5, NULL);
 }
 
 void SNDDMA_Shutdown(void)
 {
 	if (snd_inited)
 	{
-		SDL_CloseAudio();
+		close(dsp);
 		snd_inited = 0;
 	}
 }

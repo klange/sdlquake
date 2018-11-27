@@ -12,12 +12,10 @@
 #include <ctype.h>
 #include <errno.h>
 #ifndef __WIN32__
-#include <sys/ipc.h>
-#include <sys/shm.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <sys/mman.h>
 #endif
+#include <syscall.h>
 
 #include "quakedef.h"
 
@@ -286,6 +284,7 @@ void Sys_DebugLog(char *file, char *fmt, ...)
     fclose(fp);
 }
 
+
 double Sys_FloatTime (void)
 {
 #ifdef __WIN32__
@@ -352,7 +351,7 @@ void Sys_LineRefresh(void)
 
 void Sys_Sleep(void)
 {
-	SDL_Delay(1);
+	//SDL_Delay(1);
 }
 
 void floating_point_exception_handler(int whatever)
@@ -365,6 +364,8 @@ void moncontrol(int x)
 {
 }
 
+extern unsigned short sdl_scale;
+
 int main (int c, char **v)
 {
 
@@ -373,6 +374,7 @@ int main (int c, char **v)
 	extern int vcrFile;
 	extern int recording;
 	static int frame;
+	int i;
 
 	moncontrol(0);
 
@@ -387,6 +389,11 @@ int main (int c, char **v)
 	COM_InitArgv(c, v);
 	parms.argc = com_argc;
 	parms.argv = com_argv;
+
+	i = COM_CheckParm ("-sdl-scale");
+	if (i && i < com_argc-1) {
+	    sdl_scale = atoi(com_argv[i+1]);
+	}
 
 	Sys_Init();
 
@@ -437,9 +444,11 @@ Sys_MakeCodeWriteable
 void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length)
 {
 
+	return;
+#if 0
 	int r;
 	unsigned long addr;
-	int psize = getpagesize();
+	int psize = 4096; //getpagesize();
 
 	fprintf(stderr, "writable code %lx-%lx\n", startaddr, startaddr+length);
 
@@ -449,6 +458,7 @@ void Sys_MakeCodeWriteable (unsigned long startaddr, unsigned long length)
 
 	if (r < 0)
     		Sys_Error("Protection change failed\n");
+#endif
 
 }
 

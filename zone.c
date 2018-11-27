@@ -21,6 +21,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include "quakedef.h"
 
+#include <toaru/spinlock.h>
+
 #define	DYNAMIC_SIZE	0xc000
 
 #define	ZONEID	0x1d4a11
@@ -139,12 +141,16 @@ void Z_Free (void *ptr)
 Z_Malloc
 ========================
 */
+
+static volatile int malloc_lock = 0;
 void *Z_Malloc (int size)
 {
 	void	*buf;
 	
 Z_CheckHeap ();	// DEBUG
+	spin_lock(&malloc_lock);
 	buf = Z_TagMalloc (size, 1);
+	spin_unlock(&malloc_lock);
 	if (!buf)
 		Sys_Error ("Z_Malloc: failed on allocation of %i bytes",size);
 	Q_memset (buf, 0, size);
@@ -396,9 +402,13 @@ void Hunk_Print (qboolean all)
 Hunk_AllocName
 ===================
 */
+static volatile int hunk_lock = 0;
+
 void *Hunk_AllocName (int size, char *name)
 {
 	hunk_t	*h;
+
+	spin_lock(&hunk_lock);
 	
 #ifdef PARANOID
 	Hunk_Check ();
@@ -423,6 +433,7 @@ void *Hunk_AllocName (int size, char *name)
 	h->sentinal = HUNK_SENTINAL;
 	Q_strncpy (h->name, name, 8);
 	
+	spin_unlock(&hunk_lock);
 	return (void *)(h+1);
 }
 
@@ -482,6 +493,7 @@ Hunk_HighAllocName
 void *Hunk_HighAllocName (int size, char *name)
 {
 	hunk_t	*h;
+	spin_lock(&hunk_lock);
 
 	if (size < 0)
 		Sys_Error ("Hunk_HighAllocName: bad size: %i", size);
@@ -501,6 +513,7 @@ void *Hunk_HighAllocName (int size, char *name)
 	if (hunk_size - hunk_low_used - hunk_high_used < size)
 	{
 		Con_Printf ("Hunk_HighAlloc: failed on %i bytes\n",size);
+		spin_unlock(&hunk_lock);
 		return NULL;
 	}
 
@@ -513,6 +526,8 @@ void *Hunk_HighAllocName (int size, char *name)
 	h->size = size;
 	h->sentinal = HUNK_SENTINAL;
 	Q_strncpy (h->name, name, 8);
+
+	spin_unlock(&hunk_lock);
 
 	return (void *)(h+1);
 }

@@ -4,6 +4,8 @@
 #include "quakedef.h"
 #include "d_local.h"
 
+#include <toaru/yutani.h>
+
 viddef_t    vid;                // global video state
 unsigned short  d_8to16table[256];
 
@@ -11,8 +13,9 @@ unsigned short  d_8to16table[256];
 //#define    BASEWIDTH    320
 //#define    BASEHEIGHT   200
 // Much better for high resolution displays
-#define    BASEWIDTH    (320*2)
-#define    BASEHEIGHT   (200*2)
+unsigned short sdl_scale = 3;
+#define    BASEWIDTH    (320*sdl_scale)
+#define    BASEHEIGHT   (200*sdl_scale)
 
 int    VGA_width, VGA_height, VGA_rowbytes, VGA_bufferrowbytes = 0;
 byte    *VGA_pagebase;
@@ -56,7 +59,7 @@ void    VID_Init (unsigned char *palette)
     Uint32 flags;
 
     // Load the SDL library
-    if (SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO|SDL_INIT_CDROM) < 0)
+    if (SDL_Init(SDL_INIT_VIDEO) < 0)
         Sys_Error("VID: Couldn't load SDL: %s", SDL_GetError());
 
     // Set up display mode (width and height)
