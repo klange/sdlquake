@@ -6,8 +6,13 @@
 
 #include <toaru/yutani.h>
 
+int old_key_dest = -1;
+
 viddef_t    vid;                // global video state
 unsigned short  d_8to16table[256];
+static int		VID_highhunkmark;
+int p_mouse_x;
+int p_mouse_y;
 
 // The original defaults
 //#define    BASEWIDTH    320
@@ -49,6 +54,8 @@ void    VID_ShiftPalette (unsigned char *palette)
     VID_SetPalette(palette);
 }
 
+static Uint32 videoflags;
+
 void    VID_Init (unsigned char *palette)
 {
     int pnum, chunk;
@@ -78,9 +85,11 @@ void    VID_Init (unsigned char *palette)
     }
 
     // Set video width, height and flags
-    flags = (SDL_SWSURFACE|SDL_HWPALETTE);
+    flags = (SDL_SWSURFACE|SDL_HWPALETTE|SDL_RESIZABLE);
     if ( COM_CheckParm ("-fullscreen") )
         flags |= SDL_FULLSCREEN;
+
+    videoflags = flags;
 
     // Initialize display 
     if (!(screen = SDL_SetVideoMode(vid.width, vid.height, 8, flags)))
@@ -101,6 +110,7 @@ void    VID_Init (unsigned char *palette)
     vid.direct = 0;
     
     // allocate z buffer and surface cache
+	VID_highhunkmark = Hunk_HighMark ();
     chunk = vid.width * vid.height * sizeof (*d_pzbuffer);
     cachesize = D_SurfaceCacheForRes (vid.width, vid.height);
     chunk += cachesize;
@@ -114,7 +124,48 @@ void    VID_Init (unsigned char *palette)
     D_InitCaches (cache, cachesize);
 
     // initialize the mouse
-    SDL_ShowCursor(0);
+}
+
+static void UpdateMode(int width, int height) {
+    int pnum, chunk;
+    byte *cache;
+    int cachesize;
+    vid.width = width;
+    vid.height = height;
+    VGA_width = vid.conwidth = vid.width;
+    VGA_height = vid.conheight = vid.height;
+    vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
+    vid.numpages = 1;
+    vid.colormap = host_colormap;
+    vid.fullbright = 256 - LittleLong (*((int *)vid.colormap + 2048));
+    VGA_pagebase = vid.buffer = screen->pixels;
+    VGA_rowbytes = vid.rowbytes = screen->pitch;
+    vid.conbuffer = vid.buffer;
+    vid.conrowbytes = vid.rowbytes;
+    vid.direct = 0;
+
+    if (d_pzbuffer) {
+       D_FlushCaches();
+       Hunk_FreeToHighMark (VID_highhunkmark);
+       d_pzbuffer = NULL;
+       cache = NULL;
+    }
+    VID_highhunkmark = Hunk_HighMark ();
+
+    // allocate z buffer and surface cache
+    chunk = vid.width * vid.height * sizeof (*d_pzbuffer);
+    cachesize = D_SurfaceCacheForRes (vid.width, vid.height);
+    chunk += cachesize;
+    d_pzbuffer = Hunk_HighAllocName(chunk, "video");
+    if (d_pzbuffer == NULL)
+        Sys_Error ("Not enough memory for video mode\n");
+
+    // initialize the cache memory 
+        cache = (byte *) d_pzbuffer
+                + vid.width * vid.height * sizeof (*d_pzbuffer);
+    D_InitCaches (cache, cachesize);
+
+    Show();
 }
 
 void    VID_Shutdown (void)
@@ -294,17 +345,30 @@ void Sys_SendKeyEvents(void)
                 break;
 
             case SDL_MOUSEMOTION:
-                if ( (event.motion.x != (vid.width/2)) ||
-                     (event.motion.y != (vid.height/2)) ) {
-                    mouse_x = event.motion.xrel*10;
-                    mouse_y = event.motion.yrel*10;
-                    if ( (event.motion.x < ((vid.width/2)-(vid.width/4))) ||
-                         (event.motion.x > ((vid.width/2)+(vid.width/4))) ||
-                         (event.motion.y < ((vid.height/2)-(vid.height/4))) ||
-                         (event.motion.y > ((vid.height/2)+(vid.height/4))) ) {
-                        SDL_WarpMouse(vid.width/2, vid.height/2);
+                 if (key_dest == key_game) {
+                    if ( (event.motion.x != (vid.width/2)) ||
+                         (event.motion.y != (vid.height/2)) ) {
+                        mouse_x = event.motion.xrel*10;
+                        mouse_y = event.motion.yrel*10;
+                        if ( (event.motion.x < ((vid.width/2)-(vid.width/4))) ||
+                             (event.motion.x > ((vid.width/2)+(vid.width/4))) ||
+                             (event.motion.y < ((vid.height/2)-(vid.height/4))) ||
+                             (event.motion.y > ((vid.height/2)+(vid.height/4))) ) {
+                            SDL_WarpMouse(vid.width/2, vid.height/2);
+                        }
                     }
-                }
+                 } else {
+                    mouse_x = (float) (event.motion.x-p_mouse_x);
+                    mouse_y = (float) (event.motion.y-p_mouse_y);
+                    p_mouse_x=event.motion.x;
+                    p_mouse_y=event.motion.y;
+
+                 }
+                break;
+
+            case SDL_VIDEORESIZE:
+                screen = SDL_SetVideoMode(event.resize.w, event.resize.h, 8, videoflags);
+                UpdateMode(event.resize.w, event.resize.h);
                 break;
 
             case SDL_QUIT:
@@ -314,6 +378,15 @@ void Sys_SendKeyEvents(void)
                 break;
             default:
                 break;
+        }
+        if (old_key_dest != key_dest) {
+           old_key_dest = key_dest;
+
+           if (key_dest != key_game) {
+              SDL_ShowCursor(1);
+           } else {
+              SDL_ShowCursor(0);
+           }
         }
     }
 }

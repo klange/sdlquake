@@ -133,7 +133,7 @@ r_aclipa.o r_aliasa.o r_drawa.o r_edgea.o surf16.o surf8.o worlda.o \
 d_vars.o nonintel.o
 sdlquake_DEPENDENCIES = 
 sdlquake_LDFLAGS = 
-CFLAGS = -g -O2 -D_GNU_SOURCE=1 -I/home/klange/Projects/workspace/SDL/include -DSDL -DELF
+CFLAGS = -g -O2 -D_GNU_SOURCE=1 -I/home/klange/Projects/workspace/SDL/include -DSDL -DELF -L/home/klange/Projects/workspace/SDL/build/.libs
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@

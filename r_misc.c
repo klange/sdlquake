@@ -442,6 +442,7 @@ r_refdef.viewangles[2]=    0;
 	{
 		if (r_dowarp)
 		{
+
 			if ((vid.width <= vid.maxwarpwidth) &&
 				(vid.height <= vid.maxwarpheight))
 			{
