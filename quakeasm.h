@@ -31,11 +31,7 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #endif
 
-#if defined(__i386__) && defined(USE_ASM)
-#define id386	1
-#else
 #define id386	0
-#endif
 
 // !!! must be kept the same as in d_iface.h !!!
 #define TRANSPARENT_COLOR	255

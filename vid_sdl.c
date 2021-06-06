@@ -8,7 +8,7 @@
 
 int old_key_dest = -1;
 
-viddef_t    vid;                // global video state
+extern viddef_t    vid;                // global video state
 unsigned short  d_8to16table[256];
 static int		VID_highhunkmark;
 int p_mouse_x;

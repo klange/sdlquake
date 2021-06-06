@@ -57,15 +57,15 @@ POST_INSTALL = :
 NORMAL_UNINSTALL = :
 PRE_UNINSTALL = :
 POST_UNINSTALL = :
-host_alias = i686-pc-toaru
-host_triplet = i686-pc-toaru
-CC = i686-pc-toaru-gcc
+host_alias = x86_64-pc-toaru
+host_triplet = x86_64-pc-toaru
+CC = x86_64-pc-toaru-gcc
 ICONOBJ = 
 INETLIB = 
 MAKEINFO = makeinfo
 MATHLIB = 
 PACKAGE = sdlquake
-SDL_CFLAGS = -D_GNU_SOURCE=1 -I/home/klange/Projects/workspace/SDL/include -L/home/klange/Projects/workspace/SDL/build/.libs
+SDL_CFLAGS = -D_GNU_SOURCE=1 -I/home/klange/Projects/workspace/SDL/include
 SDL_CONFIG = /home/klange/bin/sdl-config
 SDL_LIBS = 
 
@@ -116,7 +116,7 @@ PROGRAMS =  $(bin_PROGRAMS)
 DEFS =  -DPACKAGE=\"sdlquake\" -DVERSION=\"1.0.9\"  -I. -I$(srcdir) 
 CPPFLAGS = 
 LDFLAGS = 
-LIBS = -lSDL-1.2 -ltoaru_decorations -ltoaru_menu -ltoaru_sdf -ltoaru_yutani -ltoaru_icon_cache -ltoaru_graphics -ltoaru_hashmap -ltoaru_list -ltoaru_kbd -ltoaru_pex 
+LIBS = -lSDL-1.2
 sdlquake_OBJECTS =  cd_sdl.o chase.o cl_demo.o cl_input.o cl_main.o \
 cl_parse.o cl_tent.o cmd.o common.o console.o crc.o cvar.o d_copy.o \
 d_edge.o d_fill.o d_init.o d_modech.o d_part.o d_polyse.o d_scan.o \
@@ -133,7 +133,7 @@ r_aclipa.o r_aliasa.o r_drawa.o r_edgea.o surf16.o surf8.o worlda.o \
 d_vars.o nonintel.o
 sdlquake_DEPENDENCIES = 
 sdlquake_LDFLAGS = 
-CFLAGS = -g -O2 -D_GNU_SOURCE=1 -I/home/klange/Projects/workspace/SDL/include -DSDL -DELF -L/home/klange/Projects/workspace/SDL/build/.libs
+CFLAGS = -g -O2 -D_GNU_SOURCE=1  -I/home/klange/Projects/workspace/SDL/include -DSDL -DELF
 COMPILE = $(CC) $(DEFS) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CFLAGS) $(CFLAGS)
 CCLD = $(CC)
 LINK = $(CCLD) $(AM_CFLAGS) $(CFLAGS) $(LDFLAGS) -o $@

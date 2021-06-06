@@ -7,6 +7,8 @@
 #include "quakeasm.h"
 #include "asm_draw.h"
 
+#if id386
+
 	.data
 
 LCopyWidth:		.long	0
@@ -147,3 +149,4 @@ LLRowLoop:
 
 	ret
 
+#endif
