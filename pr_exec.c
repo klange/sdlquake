@@ -501,6 +501,7 @@ while (1)
 					(a->vector[2] == b->vector[2]);
 		break;
 	case OP_EQ_S:
+		if (a->string > 100000 || b->string > 10000) { fprintf(stderr, "runaway OP_EQ_S? %d\n", a->string); }
 		c->_float = !strcmp(pr_strings+a->string,pr_strings+b->string);
 		break;
 	case OP_EQ_E:
@@ -520,6 +521,7 @@ while (1)
 					(a->vector[2] != b->vector[2]);
 		break;
 	case OP_NE_S:
+		if (a->string > 100000 || b->string > 10000) { fprintf(stderr, "runaway OP_NE_S? %d\n", a->string); }
 		c->_float = strcmp(pr_strings+a->string,pr_strings+b->string);
 		break;
 	case OP_NE_E:

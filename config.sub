@@ -376,6 +376,8 @@ case $basic_machine in
 		basic_machine=`echo $1 | sed -e 's/86.*/86-pc/'`
 		os=-solaris2
 		;;
+	x86_64*)
+		;;
 	iris | iris4d)
 		basic_machine=mips-sgi
 		case $os in

@@ -24,7 +24,8 @@ Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
+//#include <netinet/in.h>
+#include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/param.h>
 #include <sys/ioctl.h>
@@ -52,12 +53,15 @@ static unsigned long myAddr;
 
 #include "net_udp.h"
 
+/** XXX (klange) */
+#define MAXHOSTNAMELEN 256
+
 //=============================================================================
 
 int UDP_Init (void)
 {
 	struct hostent *local;
-	char	buff[MAXHOSTNAMELEN];
+	char	buff[MAXHOSTNAMELEN] = "localhost";
 	struct qsockaddr addr;
 	char *colon;
 	
@@ -65,7 +69,7 @@ int UDP_Init (void)
 		return -1;
 
 	// determine my name & address
-	gethostname(buff, MAXHOSTNAMELEN);
+	//gethostname(buff, MAXHOSTNAMELEN);
 	local = gethostbyname(buff);
 	myAddr = *(int *)local->h_addr_list[0];
 
@@ -80,7 +84,7 @@ int UDP_Init (void)
 		Sys_Error("UDP_Init: Unable to open control socket\n");
 
 	((struct sockaddr_in *)&broadcastaddr)->sin_family = AF_INET;
-	((struct sockaddr_in *)&broadcastaddr)->sin_addr.s_addr = INADDR_BROADCAST;
+	((struct sockaddr_in *)&broadcastaddr)->sin_addr.s_addr = 0xFFFFFFFF; //INADDR_BROADCAST;
 	((struct sockaddr_in *)&broadcastaddr)->sin_port = htons(net_hostport);
 
 	UDP_GetSocketAddr (net_controlsocket, &addr);
@@ -132,16 +136,18 @@ int UDP_OpenSocket (int port)
 	struct sockaddr_in address;
 	qboolean _true = true;
 
-	if ((newsocket = socket (PF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
+	if ((newsocket = socket (AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 		return -1;
 
 #if 0
 	if (ioctl (newsocket, FIONBIO, (char *)&_true) == -1)
 		goto ErrorReturn;
 #endif
+
 	address.sin_family = AF_INET;
 	address.sin_addr.s_addr = INADDR_ANY;
 	address.sin_port = htons(port);
+	fprintf(stderr, "Going for bind...\n");
 	if( bind (newsocket, (void *)&address, sizeof(address)) == -1)
 		goto ErrorReturn;
 
@@ -235,10 +241,12 @@ int UDP_CheckNewConnections (void)
 	if (net_acceptsocket == -1)
 		return -1;
 
+	#if 0
 	if (ioctl (net_acceptsocket, FIONREAD, &available) == -1)
 		Sys_Error ("UDP: ioctlsocket (FIONREAD) failed\n");
 	if (available)
 		return net_acceptsocket;
+	#endif
 	return -1;
 }
 
@@ -246,7 +254,7 @@ int UDP_CheckNewConnections (void)
 
 int UDP_Read (int socket, byte *buf, int len, struct qsockaddr *addr)
 {
-	int addrlen = sizeof (struct qsockaddr);
+	unsigned long addrlen = sizeof (struct qsockaddr);
 	int ret;
 
 	ret = recvfrom (socket, buf, len, 0, (struct sockaddr *)addr, &addrlen);
@@ -259,6 +267,7 @@ int UDP_Read (int socket, byte *buf, int len, struct qsockaddr *addr)
 
 int UDP_MakeSocketBroadcastCapable (int socket)
 {
+	#if 0
 	int				i = 1;
 
 	// make this socket broadcast capable
@@ -267,6 +276,8 @@ int UDP_MakeSocketBroadcastCapable (int socket)
 	net_broadcastsocket = socket;
 
 	return 0;
+	#endif
+	return -1;
 }
 
 //=============================================================================
@@ -334,7 +345,7 @@ int UDP_StringToAddr (char *string, struct qsockaddr *addr)
 
 int UDP_GetSocketAddr (int socket, struct qsockaddr *addr)
 {
-	int addrlen = sizeof(struct qsockaddr);
+	unsigned long addrlen = sizeof(struct qsockaddr);
 	unsigned int a;
 
 	Q_memset(addr, 0, sizeof(struct qsockaddr));
@@ -352,12 +363,14 @@ int UDP_GetNameFromAddr (struct qsockaddr *addr, char *name)
 {
 	struct hostent *hostentry;
 
+	#if 0
 	hostentry = gethostbyaddr ((char *)&((struct sockaddr_in *)addr)->sin_addr, sizeof(struct in_addr), AF_INET);
 	if (hostentry)
 	{
 		Q_strncpy (name, (char *)hostentry->h_name, NET_NAMELEN - 1);
 		return 0;
 	}
+	#endif
 
 	Q_strcpy (name, UDP_AddrToString (addr));
 	return 0;

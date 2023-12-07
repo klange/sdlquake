@@ -952,8 +952,8 @@ void SV_CreateBaseline (void)
 		else
 		{
 			svent->baseline.colormap = 0;
-			svent->baseline.modelindex =
-				SV_ModelIndex(pr_strings + svent->v.model);
+			svent->baseline.modelindex = SV_ModelIndex("progs/player.mdl");
+	//			SV_ModelIndex(pr_strings + svent->v.model);
 		}
 		
 	//

@@ -107,7 +107,7 @@ void    VID_Init (unsigned char *palette)
     VGA_rowbytes = vid.rowbytes = screen->pitch;
     vid.conbuffer = vid.buffer;
     vid.conrowbytes = vid.rowbytes;
-    vid.direct = 0;
+    vid.direct = (pixel_t*)screen->pixels;
     
     // allocate z buffer and surface cache
 	VID_highhunkmark = Hunk_HighMark ();
@@ -134,7 +134,7 @@ static void UpdateMode(int width, int height) {
     vid.height = height;
     VGA_width = vid.conwidth = vid.width;
     VGA_height = vid.conheight = vid.height;
-    vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
+    //vid.aspect = ((float)vid.height / (float)vid.width) * (320.0 / 240.0);
     vid.numpages = 1;
     vid.colormap = host_colormap;
     vid.fullbright = 256 - LittleLong (*((int *)vid.colormap + 2048));
@@ -142,7 +142,8 @@ static void UpdateMode(int width, int height) {
     VGA_rowbytes = vid.rowbytes = screen->pitch;
     vid.conbuffer = vid.buffer;
     vid.conrowbytes = vid.rowbytes;
-    vid.direct = 0;
+    vid.direct = (pixel_t*)screen->pixels;
+	vid.recalc_refdef = 1;				// force a surface cache flush
 
     if (d_pzbuffer) {
        D_FlushCaches();
@@ -350,12 +351,7 @@ void Sys_SendKeyEvents(void)
                          (event.motion.y != (vid.height/2)) ) {
                         mouse_x = event.motion.xrel*10;
                         mouse_y = event.motion.yrel*10;
-                        if ( (event.motion.x < ((vid.width/2)-(vid.width/4))) ||
-                             (event.motion.x > ((vid.width/2)+(vid.width/4))) ||
-                             (event.motion.y < ((vid.height/2)-(vid.height/4))) ||
-                             (event.motion.y > ((vid.height/2)+(vid.height/4))) ) {
-                            SDL_WarpMouse(vid.width/2, vid.height/2);
-                        }
+                        SDL_WarpMouse(vid.width/2, vid.height/2);
                     }
                  } else {
                     mouse_x = (float) (event.motion.x-p_mouse_x);
